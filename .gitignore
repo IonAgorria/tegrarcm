@@ -13,5 +13,17 @@ Makefile
 /config.log
 /config.status
 /stamp-h1
+/src/tegrarcm*
+Makefile.in
+/result
+/missing
+/install-sh
+/depcomp
+/configure
+/config.sub
+/config.h.in*
+/config.guess
+/compile
+/aclocal.m4
+/build
 
-src/tegrarcm
