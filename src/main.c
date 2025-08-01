@@ -117,7 +117,7 @@ static void print_version(char *progname)
 
 static void usage(char *progname)
 {
-	fprintf(stderr, "usage: %s [options] --bct=bctfile --bootloader=blfile --loadaddr=<loadaddr>\n", progname);
+	fprintf(stderr, "usage: %s [options] --bct=bctfile --bootloader=blfile\n", progname);
 	fprintf(stderr, "       %s [options] --bct=bctfile readbct\n", progname);
 	fprintf(stderr, "\n");
 	fprintf(stderr, "Commands:\n");
@@ -134,6 +134,9 @@ static void usage(char *progname)
 	fprintf(stderr, "\t\tSee `udevadm info /dev/bus/usb/003/042` DEVPATH\n");
 	fprintf(stderr, "\t\tSee /sys/bus/usb/devices/* with matching busnum/devnum files\n");
 #endif
+	fprintf(stderr, "\t--loadaddr=<loadaddr>\n");
+	fprintf(stderr, "\t\tSpecify the load address for the bootloader, if this option is\n");
+	fprintf(stderr, "\t\tnot provided, it uses SoC default value\n");
 	fprintf(stderr, "\t--entryaddr=<entryaddr>\n");
 	fprintf(stderr, "\t\tSpecify the entry point for the bootloader, if this option is\n");
 	fprintf(stderr, "\t\tnot provided, it is assumed to be loadaddr\n");
@@ -421,17 +424,7 @@ int main(int argc, char **argv)
 			usage(argv[0]);
 			exit(EXIT_FAILURE);
 		}
-		if (loadaddr == 0) {
-			fprintf(stderr, "loadaddr must be specified\n");
-			usage(argv[0]);
-			exit(EXIT_FAILURE);
-		}
-		if (entryaddr == 0) {
-			entryaddr = loadaddr;
-		}
 		printf("bootloader file: %s\n", blfile);
-		printf("load addr 0x%x\n", loadaddr);
-		printf("entry addr 0x%x\n", entryaddr);
 	}
 
 	/* if sign_msgs, generate signed msgs, then exit */
@@ -470,6 +463,21 @@ int main(int argc, char **argv)
 	if (!usb)
 		error(1, errno, "could not open USB device");
 	printf("device id: 0x%x\n", devid);
+
+	if (!do_read) {
+		if (loadaddr == 0) {
+			if ((devid & 0xff) == USB_DEVID_NVIDIA_TEGRA20) {
+				loadaddr = 0x108000;
+			} else {
+				loadaddr = 0x80108000;
+			}
+		}
+		if (entryaddr == 0) {
+			entryaddr = loadaddr;
+		}
+		printf("load addr 0x%x\n", loadaddr);
+		printf("entry addr 0x%x\n", entryaddr);
+	}
 
 	ret = usb_read(usb, (uint8_t *)uid, sizeof(uid), &actual_len);
 	if (!ret) {
