@@ -531,7 +531,7 @@ int main(int argc, char **argv)
 	// get platform info and dump it
 	ret = nv3p_cmd_send(h3p, NV3P_CMD_GET_PLATFORM_INFO, (uint8_t *)&info);
 	if (ret)
-		error(1, errno, "retreiving platform info");
+		error(1, errno, "retrieving platform info");
 	ret = wait_status(h3p);
 	if (ret)
 		error(1, errno, "wait status after platform info");
@@ -575,7 +575,8 @@ static int create_name_string(char *out, const char *in, const char *ext)
 			strlen(in) + strlen(ext) + 1 - PATH_MAX, in);
 		return -1;
 	}
-	snprintf(out, PATH_MAX, "%s%s", in, ext);
+	strncpy(out, in, PATH_MAX);
+	strncpy(out, ext, PATH_MAX - strlen(out));
 	return 0;
 }
 
@@ -1126,7 +1127,7 @@ static int read_bct(nv3p_handle_t h3p, char *filename)
 	bct_data = (uint8_t *)malloc(bct_info.length);
 	ret = nv3p_data_recv(h3p, bct_data, bct_info.length);
 	if (ret) {
-		dprintf("error retreiving bct data\n");
+		dprintf("error retrieving bct data\n");
 		goto out;
 	}
 

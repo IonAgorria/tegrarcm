@@ -82,8 +82,8 @@ using CryptoPP::AutoSeededRandomPool;
 #include <stdexcept>
 #include "rcm.h"
 
-extern "C" int rsa_pss_sign(const char *key_file, const unsigned char *msg,
-			int len, unsigned char *sig_buf, unsigned char *modulus_buf)
+extern "C" int rsa_pss_sign(const char *key_file, const uint8_t *msg,
+			uint32_t len, uint8_t *sig_buf, uint8_t *modulus_buf)
 {
 	try {
 		AutoSeededRandomPool rng;
@@ -127,8 +127,7 @@ extern "C" int rsa_pss_sign(const char *key_file, const unsigned char *msg,
 	return 0;
 }
 
-extern "C" int rsa_pss_sign_file(const char *key_file, const char *msg_file,
-			unsigned char *sig_buf)
+extern "C" int rsa_pss_sign_file(const char *key_file, const char *msg_file, uint8_t *sig_buf)
 {
 	try {
 		AutoSeededRandomPool rng;
