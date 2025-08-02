@@ -10,8 +10,8 @@ tegrarcm_SOURCES = \
 	rcm.c \
 	rsa-pss.cpp \
 	rsa-pss.h \
-	aes-cmac.cpp \
-	aes-cmac.h \
+	aes.cpp \
+	aes.h \
 	debug.h \
 	nv3p.h \
 	nv3p_status.h \

@@ -31,7 +31,7 @@
 #include <string.h>
 #include <errno.h>
 #include "rcm.h"
-#include "aes-cmac.h"
+#include "aes.h"
 #include "rsa-pss.h"
 
 static int rcm_sign_msg(uint8_t *buf);

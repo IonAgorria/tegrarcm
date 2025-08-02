@@ -43,7 +43,7 @@
 #include "usb.h"
 #include "nv3p.h"
 #include "nv3p_status.h"
-#include "aes-cmac.h"
+#include "aes.h"
 #include "rsa-pss.h"
 #include "rcm.h"
 #include "debug.h"
