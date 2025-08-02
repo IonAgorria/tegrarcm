@@ -87,6 +87,7 @@ static void set_platform_info(nv3p_platform_info_t *info);
 static uint32_t get_op_mode(void);
 
 static nv3p_platform_info_t *g_platform_info = NULL;
+static uint8_t* rcm_sbk = NULL;
 extern uint32_t usb_timeout;
 
 enum cmdline_opts {
@@ -98,6 +99,7 @@ enum cmdline_opts {
 	OPT_VERSION,
 	OPT_MINILOADER,
 	OPT_MINIENTRY,
+    OPT_SBK,
 	OPT_PKC,
 #ifdef HAVE_USB_PORT_MATCH
 	OPT_USBPORTPATH,
@@ -149,6 +151,9 @@ static void usage(char *progname)
 	fprintf(stderr, "\t\tminiloader\n");
 	fprintf(stderr, "\t--miniloader_entry=<mlentry>\n");
 	fprintf(stderr, "\t\tSpecify the entry point for the miniloader\n");
+    fprintf(stderr, "\t--sbk=<SBK>\n");
+    fprintf(stderr, "\t\tSpecify the SBK key for secured devices. It can be formatted as\n");
+    fprintf(stderr, "\t\t32 hex values or 4 group of 8 hex values with optional 0x's prepended\n");
 	fprintf(stderr, "\t--pkc=<key.ber>\n");
 	fprintf(stderr, "\t\tSpecify the key file for secured devices. The private key should be\n");
 	fprintf(stderr, "\t\tin DER format\n");
@@ -258,6 +263,7 @@ int main(int argc, char **argv)
 		[OPT_VERSION]    = {"version", 0, 0, 0},
 		[OPT_MINILOADER] = {"miniloader", 1, 0, 0},
 		[OPT_MINIENTRY]  = {"miniloader_entry", 1, 0, 0},
+		[OPT_SBK]        = {"sbk", 1, 0, 0},
 		[OPT_PKC]        = {"pkc", 1, 0, 0},
 #ifdef HAVE_USB_PORT_MATCH
 		[OPT_USBPORTPATH]  = {"usb-port-path", 1, 0, 0},
@@ -301,6 +307,46 @@ int main(int argc, char **argv)
 			case OPT_MINIENTRY:
 				mlentry = strtoul(optarg, NULL, 0);
 				break;
+			case OPT_SBK: {
+				if (!rcm_sbk) {
+					rcm_sbk = malloc(SBK_LEN);
+				}
+				char* argptr = optarg;
+				char argtmp[9] = {};
+				for (int i = 0; i < 4; ++i) {
+					//Skip space
+					while (strncmp(argptr, " ", 1) == 0) {
+						argptr += 1;
+					}
+					//Skip 0x
+					if (strncmp(argptr, "0x", 2) == 0) {
+						argptr += 2;
+					}
+					//Make sure there is at least 8 hex's
+					if (strlen(argptr) < 8) {
+						fprintf(stderr, "%s: Wrong SBK format at block %d: %s\n",
+							argv[0], i, argptr);
+						usage(argv[0]);
+						exit(EXIT_FAILURE);
+					}
+					strncpy(argtmp, argptr, 8);
+					argtmp[8] = 0;
+					uint32_t val = strtoul(argtmp, NULL, 16);
+					for (int j = 0; j < sizeof(uint32_t); ++j) {
+						size_t src_shift = (sizeof(uint32_t) - 1 - j) * 8;
+						size_t dst_byte = (sizeof(uint32_t) * i) + j;
+						rcm_sbk[dst_byte] = (val >> src_shift) & 0xFF;
+					}
+					argptr += 8;
+				}
+				if (strlen(argptr) != 0) {
+					fprintf(stderr, "%s: Wrong SBK format at the end: %s\n",
+						argv[0], argptr);
+					usage(argv[0]);
+					exit(EXIT_FAILURE);
+				}
+				break;
+			}
 			case OPT_PKC:
 				pkc_keyfile = optarg;
 				break;
@@ -614,13 +660,13 @@ static int initialize_rcm(uint16_t devid, usb_device_t *usb,
 	if ((devid & 0xff) == USB_DEVID_NVIDIA_TEGRA20 ||
 	    (devid & 0xff) == USB_DEVID_NVIDIA_TEGRA30) {
 		dprintf("initializing RCM version 1\n");
-		ret = rcm_init(RCM_VERSION_1, pkc_keyfile);
+		ret = rcm_init(RCM_VERSION_1, rcm_sbk, pkc_keyfile);
 	} else if ((devid & 0xff) == USB_DEVID_NVIDIA_TEGRA114) {
 		dprintf("initializing RCM version 35\n");
-		ret = rcm_init(RCM_VERSION_35, pkc_keyfile);
+		ret = rcm_init(RCM_VERSION_35, rcm_sbk, pkc_keyfile);
 	} else if ((devid & 0xff) == USB_DEVID_NVIDIA_TEGRA124) {
 		dprintf("initializing RCM version 40\n");
-		ret = rcm_init(RCM_VERSION_40, pkc_keyfile);
+		ret = rcm_init(RCM_VERSION_40, rcm_sbk, pkc_keyfile);
 	} else {
 		fprintf(stderr, "unknown tegra device: 0x%x\n", devid);
 		return errno;
@@ -713,6 +759,7 @@ static int initialize_rcm(uint16_t devid, usb_device_t *usb,
 done:
 	if (msg_buff)
 		free(msg_buff);
+
 	return ret;
 }
 

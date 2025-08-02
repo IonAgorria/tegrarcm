@@ -31,6 +31,7 @@
 
 #include <stdint.h>
 
+#define SBK_LEN 16
 #define RCM_MIN_MSG_LENGTH 1024 // In bytes
 
 #define NVBOOT_VERSION(a,b) ((((a)&0xffff) << 16) | ((b)&0xffff))
@@ -113,7 +114,7 @@ typedef struct {
 #define RCM_OP_MODE_ODM_OPEN        0x5
 #define RCM_OP_MODE_ODM_SECURE_PKC  0x6
 
-int rcm_init(uint32_t version, const char *keyfile);
+int rcm_init(uint32_t version, const uint8_t *sbk, const char *keyfile);
 uint32_t rcm_get_msg_len(uint8_t *msg);
 int rcm_create_msg(
 	uint32_t opcode,

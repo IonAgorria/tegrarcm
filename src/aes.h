@@ -33,7 +33,14 @@
 extern "C" {
 #endif
 
-int cmac_hash(const unsigned char *msg, int len, unsigned char *cmac_buf);
+typedef struct aes_cbc_state_struct *aes_cbc_state;
+	
+int cmac_hash(const uint8_t *msg, uint32_t len, uint8_t *cmac_buf, const uint8_t *sbk);
+
+aes_cbc_state aes_cbc_encrypt_start(const uint8_t *sbk, const uint8_t* iv);
+int aes_cbc_encrypt_feed(aes_cbc_state state, uint8_t *msg, uint32_t len);
+void aes_cbc_encrypt_finish(aes_cbc_state* state);
+int aes_cbc_encrypt(uint8_t *msg, uint32_t len, const uint8_t *sbk);
 
 #ifdef __cplusplus
 }

@@ -73,9 +73,10 @@ static uint32_t rcm_get_msg_buf_len(uint32_t payload_len);
 
 static uint32_t rcm_version = 0;
 static uint32_t message_size = 0;
+static const uint8_t *rcm_sbk = NULL;
 static const char *rcm_keyfile = NULL;
 
-int rcm_init(uint32_t version, const char *keyfile)
+int rcm_init(uint32_t version, const uint8_t *sbk, const char *keyfile)
 {
 	int ret = -EINVAL;
 
@@ -95,6 +96,7 @@ int rcm_init(uint32_t version, const char *keyfile)
 		ret = 0;
 	}
 
+	rcm_sbk = sbk;
 	rcm_keyfile = keyfile;
 
 	return ret;
@@ -171,10 +173,11 @@ static int rcm1_sign_msg(uint8_t *buf)
 {
 	rcm1_msg_t *msg;
 	uint32_t crypto_len;
+	int ret = 0;
 
 	msg = (rcm1_msg_t*)buf;
 
-	// signing does not include the len_insecure and
+	// encryption and signing does not include the len_insecure and
 	// cmac_hash fields at the beginning of the message.
 	crypto_len = msg->len_insecure - sizeof(msg->len_insecure) -
 		sizeof(msg->cmac_hash);
@@ -182,18 +185,24 @@ static int rcm1_sign_msg(uint8_t *buf)
 		return -EMSGSIZE;
 	}
 
-	cmac_hash(msg->reserved, crypto_len, msg->cmac_hash);
-	return 0;
+	if (rcm_sbk) {
+		ret = aes_cbc_encrypt(msg->reserved, crypto_len, rcm_sbk);
+		if (ret)
+			return ret;
+	}
+
+	return cmac_hash(msg->reserved, crypto_len, msg->cmac_hash, rcm_sbk);
 }
 
 static int rcm35_sign_msg(uint8_t *buf)
 {
 	rcm35_msg_t *msg;
 	uint32_t crypto_len;
+	int ret = 0;
 
 	msg = (rcm35_msg_t*)buf;
 
-	// signing does not include the len_insecure, modulus
+	// encryption and signing does not include the len_insecure, modulus
 	// and object signature at the beginning of the message
 	crypto_len = msg->len_insecure - sizeof(msg->len_insecure) -
 		sizeof(msg->modulus) -
@@ -202,7 +211,15 @@ static int rcm35_sign_msg(uint8_t *buf)
 		return -EMSGSIZE;
 	}
 
-	cmac_hash(msg->reserved, crypto_len, msg->object_sig.cmac_hash);
+	if (rcm_sbk) {
+		ret = aes_cbc_encrypt(msg->reserved, crypto_len, rcm_sbk);
+		if (ret)
+			return ret;
+	}
+
+	ret = cmac_hash(msg->reserved, crypto_len, msg->object_sig.cmac_hash, rcm_sbk);
+	if (ret)
+		return ret;
 
 	if (rcm_keyfile)
 		rsa_pss_sign(rcm_keyfile, msg->reserved, crypto_len,
@@ -215,10 +232,11 @@ static int rcm40_sign_msg(uint8_t *buf)
 {
 	rcm40_msg_t *msg;
 	uint32_t crypto_len;
+	int ret = 0;
 
 	msg = (rcm40_msg_t*)buf;
 
-	// signing does not include the len_insecure, modulus
+	// encryption and signing does not include the len_insecure, modulus
 	// and object signature at the beginning of the message
 	crypto_len = msg->len_insecure - sizeof(msg->len_insecure) -
 		sizeof(msg->modulus) -
@@ -227,7 +245,16 @@ static int rcm40_sign_msg(uint8_t *buf)
 		return -EMSGSIZE;
 	}
 
-	cmac_hash(msg->reserved, crypto_len, msg->object_sig.cmac_hash);
+	if (rcm_sbk) {
+		ret = aes_cbc_encrypt(msg->reserved, crypto_len, rcm_sbk);
+		if (ret)
+			return ret;
+	}
+
+	ret = cmac_hash(msg->reserved, crypto_len, msg->object_sig.cmac_hash, rcm_sbk);
+	if (ret)
+		return ret;
+
 	if (rcm_keyfile)
 		rsa_pss_sign(rcm_keyfile, msg->reserved, crypto_len,
 			msg->object_sig.rsa_pss_sig, msg->modulus);
@@ -397,4 +424,3 @@ static uint32_t rcm_get_pad_len(uint32_t payload_len)
 
 	return pad_len;
 }
-
