@@ -461,6 +461,9 @@ int main(int argc, char **argv)
 		exit(EXIT_FAILURE);
 	}
 
+	if (mlfile)
+		printf("miniloader file: %s\n", mlfile);
+
 	if (bctfile)
 		printf("bct file: %s\n", bctfile);
 
